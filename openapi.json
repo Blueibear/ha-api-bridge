@@ -1,0 +1,88 @@
+import json
+
+# Define OpenAPI spec for the current HA Flask API
+openapi_spec = {
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Home Assistant API Bridge",
+        "version": "1.0.0",
+        "description": "Bridge API for interacting with Home Assistant entities, states, scripts, and automation."
+    },
+    "servers": [
+        {
+            "url": "http://192.168.5.87:5001"
+        }
+    ],
+    "paths": {
+        "/hass/check-key": {
+            "get": {
+                "summary": "Verify API key",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "x-api-key",
+                        "required": True,
+                        "schema": {"type": "string"}
+                    }
+                ],
+                "responses": {
+                    "200": {"description": "Key is valid"},
+                    "401": {"description": "Invalid key"}
+                }
+            }
+        },
+        "/hass/entities": {
+            "get": {
+                "summary": "List all Home Assistant entities",
+                "responses": {
+                    "200": {"description": "List of entity states"}
+                }
+            }
+        },
+        "/hass/services": {
+            "get": {
+                "summary": "List available Home Assistant services",
+                "responses": {
+                    "200": {"description": "List of services"}
+                }
+            }
+        },
+        "/hass/automation": {
+            "post": {
+                "summary": "Add and reload an automation",
+                "parameters": [
+                    {
+                        "in": "header",
+                        "name": "x-api-key",
+                        "required": True,
+                        "schema": {"type": "string"}
+                    }
+                ],
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "automation": {"type": "object"}
+                                },
+                                "required": ["automation"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {"description": "Automation added"},
+                    "400": {"description": "Missing payload"},
+                    "401": {"description": "Unauthorized"}
+                }
+            }
+        }
+    }
+}
+
+with open("/mnt/data/openapi.json", "w") as f:
+    json.dump(openapi_spec, f, indent=2)
+
+"/mnt/data/openapi.json"

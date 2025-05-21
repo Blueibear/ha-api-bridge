@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.log
+.docker/
+credentials.json
+/home/james/.cloudflared/*.json
