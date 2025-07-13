@@ -1,0 +1,13 @@
+[Unit]
+Description=Home Assistant Flask API
+After=network.target
+
+[Service]
+User=james
+WorkingDirectory=/home/james/ha_api
+EnvironmentFile=/home/james/ha_api/.env
+ExecStart=/usr/bin/python3 /home/james/ha_api/ha_entity_server.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
