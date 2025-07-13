@@ -5,14 +5,6 @@ import yaml
 
 app = Flask(__name__)
 
-VALID_API_KEYS = {"nasteesecret123", "sk-test"}
-
-@app.before_request
-def verify_api_key():
-    key = request.headers.get("x-api-key", "")
-    if key not in VALID_API_KEYS:
-        abort(403)
-
 # Environment-based configuration
 HASS_URL = "https://jandcsmarthome.duckdns.org"
 TOKEN = os.getenv("HASS_TOKEN")
@@ -29,6 +21,8 @@ def auth_header():
 
 def require_api_key():
     api_key = request.headers.get("x-api-key")
+    print(f"🔐 Incoming x-api-key: {api_key}")
+    print(f"🔒 Backend HASS_SECRET: {SHARED_SECRET}")
     if api_key != SHARED_SECRET:
         abort(401, description="Invalid API key")
 
@@ -38,7 +32,8 @@ def index():
 
 @app.route("/hass/check-key", methods=["GET"])
 def check_key():
-    return jsonify({"status": "Key is valid"}), 200
+    require_api_key()
+    return jsonify({"status": "Key is valid"})
 
 @app.route("/hass/entities", methods=["GET"])
 def get_entities():
@@ -87,9 +82,12 @@ def set_state(entity_id):
 @app.route("/hass/script", methods=["POST"])
 def run_script():
     require_api_key()
-    entity_id = request.json.get("entity_id")
+    data = request.json
+    entity_id = data.get("entity_id")
+
     if not entity_id:
         return jsonify({"error": "Missing entity_id"}), 400
+
     try:
         response = requests.post(
             f"{HASS_URL}/api/services/script/turn_on",
@@ -104,7 +102,8 @@ def run_script():
 @app.route("/hass/scene", methods=["POST"])
 def activate_scene():
     require_api_key()
-    entity_id = request.json.get("entity_id")
+    data = request.json
+    entity_id = data.get("entity_id")
     if not entity_id:
         return jsonify({"error": "Missing entity_id"}), 400
     try:
@@ -115,6 +114,16 @@ def activate_scene():
         )
         response.raise_for_status()
         return jsonify({"status": "Scene activated"})
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/hass/state/<entity_id>", methods=["GET"])
+def get_entity_state(entity_id):
+    require_api_key()
+    try:
+        response = requests.get(f"{HASS_URL}/api/states/{entity_id}", headers=auth_header())
+        response.raise_for_status()
+        return jsonify(response.json())
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 500
 
@@ -169,18 +178,9 @@ def get_config():
     except requests.exceptions.RequestException as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/hass/public-url', methods=['GET'])
-def get_public_ngrok_url():
-    try:
-        resp = requests.get('http://127.0.0.1:4040/api/tunnels')
-        tunnels = resp.json().get('tunnels', [])
-        for tunnel in tunnels:
-            if tunnel.get('proto') == 'https':
-                return jsonify({'url': tunnel['public_url']})
-        return jsonify({'error': 'No HTTPS tunnel found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5001)
 
+@app.route("/debug/token")
+def debug_token():
+    return jsonify({"token": TOKEN})
