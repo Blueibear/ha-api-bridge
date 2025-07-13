@@ -4,3 +4,7 @@ __pycache__/
 .docker/
 credentials.json
 /home/james/.cloudflared/*.json
+
+.env
+venv/
+nohup.out
